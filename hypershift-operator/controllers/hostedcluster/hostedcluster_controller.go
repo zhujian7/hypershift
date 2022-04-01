@@ -4108,11 +4108,24 @@ func (r *HostedClusterReconciler) defaultAPIPortIfNeeded(ctx context.Context, hc
 }
 
 func (r *HostedClusterReconciler) defaultClusterIDsIfNeeded(ctx context.Context, hcluster *hyperv1.HostedCluster) error {
+	clusterIDAnnoKey := "hypershift.openshift.io/cluster-id-test"
+
 	// Default the ClusterID if unset
 	needsUpdate := false
 	if hcluster.Spec.ClusterID == "" {
-		hcluster.Spec.ClusterID = uuid.NewString()
-		needsUpdate = true
+
+		// TODO(zhujian7): find the value from annotations
+		if id, ok := hcluster.GetAnnotations()[clusterIDAnnoKey]; ok && len(id) != 0 {
+			hcluster.Spec.ClusterID = hcluster.GetAnnotations()[clusterIDAnnoKey]
+		} else {
+			hcluster.Spec.ClusterID = uuid.NewString()
+			needsUpdate = true
+			if hcluster.GetAnnotations() == nil {
+				hcluster.SetAnnotations(make(map[string]string))
+			}
+
+			hcluster.GetAnnotations()[clusterIDAnnoKey] = hcluster.Spec.ClusterID
+		}
 	}
 
 	// Default the infraID if unset
